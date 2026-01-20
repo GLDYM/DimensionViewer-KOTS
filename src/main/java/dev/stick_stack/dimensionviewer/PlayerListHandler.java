@@ -36,9 +36,20 @@ public class PlayerListHandler {
                 CommonUtils.splitResourceLocation(dimension, 1)
         ));
 
+        // Try to translate the dimension name
+        Component aliasedDimComp = Component.translatable(aliasedDim);
+
         // Finally, replace the dimension placeholder with the actual dimension name.
-        format = format.replace("%d", aliasedDim);
-        return Component.literal(format).withStyle(style);
+        MutableComponent result = Component.literal("");
+        String[] parts = format.split("%d", -1);
+        for (int i = 0; i < parts.length; i++) {
+            result.append(Component.literal(parts[i]));
+            if (i < parts.length - 1) {
+                result.append(aliasedDimComp.copy());
+            }
+        }
+
+        return result.withStyle(style);
     }
 
 
