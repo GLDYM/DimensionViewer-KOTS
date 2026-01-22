@@ -41,10 +41,10 @@ public class PlayerListHandler {
 
         // Finally, replace the dimension placeholder with the actual dimension name.
         MutableComponent result = Component.literal("");
-        String[] parts = format.split("%d", -1);
-        for (int i = 0; i < parts.length; i++) {
-            result.append(Component.literal(parts[i]));
-            if (i < parts.length - 1) {
+        List<String> parts = List.of(format.split("%d", -1));
+        for (int i = 0; i < parts.size(); i++) {
+            result.append(Component.literal(parts.get(i)));
+            if (i < parts.size() - 1) {
                 result.append(aliasedDimComp.copy());
             }
         }
