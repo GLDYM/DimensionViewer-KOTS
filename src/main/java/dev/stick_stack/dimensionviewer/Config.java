@@ -1,8 +1,7 @@
 package dev.stick_stack.dimensionviewer;
 
 import net.minecraft.ChatFormatting;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,10 +18,10 @@ public class Config {
     private static final List<String> dimensionAliases = new ArrayList<>();
     private static final List<String> customColourList = new ArrayList<>();
 
-    private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static final ForgeConfigSpec CONFIG;
+    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static final ModConfigSpec CONFIG;
 
-    public static String DEFAULT_LIST_FORMAT = "%i<%d>";
+    public static String DEFAULT_LIST_FORMAT = "%i(%d)";
 
     public static String DEFAULT_DEFAULT_COLOR = ChatFormatting.GOLD.getName().toUpperCase(Locale.ROOT);
     public static String DEFAULT_OVERWORLD_COLOR = ChatFormatting.DARK_GREEN.getName().toUpperCase(Locale.ROOT);
@@ -34,22 +33,22 @@ public class Config {
     public static boolean DEFAULT_CHAT_DIM_HOVER = true;
     public static boolean DEFAULT_ENABLE_ALIASES = true;
 
-    public static ForgeConfigSpec.ConfigValue<String> LIST_FORMAT;
-    public static ForgeConfigSpec.EnumValue<CommonUtils.DimensionPosition> DIM_POSITION;
+    public static ModConfigSpec.ConfigValue<String> LIST_FORMAT;
+    public static ModConfigSpec.EnumValue<CommonUtils.DimensionPosition> DIM_POSITION;
 
-    public static ForgeConfigSpec.ConfigValue<String> DEFAULT_COLOR;
-    public static ForgeConfigSpec.ConfigValue<String> OVERWORLD_COLOR;
-    public static ForgeConfigSpec.ConfigValue<String> NETHER_COLOR;
-    public static ForgeConfigSpec.ConfigValue<String> END_COLOR;
+    public static ModConfigSpec.ConfigValue<String> DEFAULT_COLOR;
+    public static ModConfigSpec.ConfigValue<String> OVERWORLD_COLOR;
+    public static ModConfigSpec.ConfigValue<String> NETHER_COLOR;
+    public static ModConfigSpec.ConfigValue<String> END_COLOR;
 
-    public static ForgeConfigSpec.BooleanValue PER_DIM_COLOR;
-    public static ForgeConfigSpec.BooleanValue DIM_IN_CHAT_NAME;
-    public static ForgeConfigSpec.BooleanValue CHAT_DIM_HOVER;
-    public static ForgeConfigSpec.BooleanValue ENABLE_ALIASES;
+    public static ModConfigSpec.BooleanValue PER_DIM_COLOR;
+    public static ModConfigSpec.BooleanValue DIM_IN_CHAT_NAME;
+    public static ModConfigSpec.BooleanValue CHAT_DIM_HOVER;
+    public static ModConfigSpec.BooleanValue ENABLE_ALIASES;
 
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> MODDED_DIMS;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> DIM_ALIASES;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> CUSTOM_COLORS;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> MODDED_DIMS;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> DIM_ALIASES;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> CUSTOM_COLORS;
 
     static {
         BUILDER.comment("Customization Settings").push("customization");
@@ -125,6 +124,7 @@ public class Config {
         ).defineListAllowEmpty(
                 List.of("moddedDimensions"),
                 () -> moddedDimensionList,
+                () -> "",
                 (item) -> (item instanceof String i && i.matches(modidRegex + " ([A-Z_]+)")
                 )
         );
@@ -137,6 +137,7 @@ public class Config {
         ).defineListAllowEmpty(
                 List.of("dimensionAliases"),
                 () -> dimensionAliases,
+                () -> "",
                 (item) -> (item instanceof String i && i.matches(modidRegex + " (.*)"))
         );
 
@@ -153,6 +154,7 @@ public class Config {
         ).defineListAllowEmpty(
                 List.of("customColors"),
                 () -> customColourList,
+                () -> "",
                 (item) -> (item instanceof String i
                         && i.matches("[A-Z_]+ (#(?:[0-9a-fA-F]{3}){1,2}|[rhRH][0-9]{1,3} [gsGS][0-9]{1,3} [bvBV][0-9]{1,3} ?)")
 //                                && !customColourList.contains(i.split(" ")[0])

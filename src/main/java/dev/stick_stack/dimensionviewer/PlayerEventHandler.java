@@ -5,21 +5,19 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.contents.PlainTextContents;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.IExtensionPoint;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.ServerChatEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 import java.util.List;
 
-@Mod.EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.DEDICATED_SERVER)
+@EventBusSubscriber(modid = Constants.MOD_ID, value = Dist.DEDICATED_SERVER)
 public class PlayerEventHandler {
 
     private static void refreshPlayerDetails(PlayerEvent event) {
@@ -54,11 +52,7 @@ public class PlayerEventHandler {
         return Style.EMPTY;
     }
 
-    private static Component createDimensionComponent(PlayerEvent event, MutableComponent originalName) {
-        ResourceLocation dimension = event.getEntity().level().dimension().location();
-        String dimSource = CommonUtils.toTitleCase(CommonUtils.splitResourceLocation(dimension, 0));
-        final PlayerListHandler handler = new PlayerListHandler();
-
+    private static Style getDimensionStyle(ResourceLocation dimension) {
         Style style = Style.EMPTY;
         boolean foundModdedDim = false;
         if (Config.PER_DIM_COLOR.get()) {
@@ -82,8 +76,19 @@ public class PlayerEventHandler {
             style = tryGetColor(Config.DEFAULT_COLOR.get());
         }
 
-        MutableComponent dimComponent = handler.makeDimensionComponent(event.getEntity(), Config.LIST_FORMAT.get())
-                .withStyle(style);
+        return style;
+    }
+
+    private static MutableComponent createDimensionLabel(ServerPlayer player, Component translatedDimension) {
+        ResourceLocation dimension = player.level().dimension().location();
+        String dimSource = CommonUtils.toTitleCase(CommonUtils.splitResourceLocation(dimension, 0));
+        final PlayerListHandler handler = new PlayerListHandler();
+        MutableComponent dimComponent = handler.makeDimensionComponent(
+                Config.LIST_FORMAT.get(),
+                dimension,
+                translatedDimension
+        )
+                .withStyle(getDimensionStyle(dimension));
 
         if (Config.CHAT_DIM_HOVER.get()) {
             dimComponent.withStyle(
@@ -93,7 +98,12 @@ public class PlayerEventHandler {
             );
         }
 
-        MutableComponent spacer = Component.literal(" ");
+        return dimComponent;
+    }
+
+    private static Component createDimensionComponent(ServerPlayer player, MutableComponent originalName) {
+        MutableComponent dimComponent = createDimensionLabel(player, player.level().getDescription());
+        MutableComponent spacer = MutableComponent.create(new PlainTextContents.LiteralContents(" "));
         if (Config.DIM_POSITION.get() == CommonUtils.DimensionPosition.PREPEND) {
             spacer.setStyle(Style.EMPTY.withColor(ChatFormatting.WHITE)).append(originalName);
             return dimComponent.append(spacer);
@@ -131,20 +141,26 @@ public class PlayerEventHandler {
     }
 
     @SubscribeEvent
-    public static void changeDisplayName(PlayerEvent.NameFormat event) {
+    public static void onServerChat(ServerChatEvent event) {
         if (!Config.DIM_IN_CHAT_NAME.get()) return;
 
-        event.setDisplayname(createDimensionComponent(event, event.getDisplayname().copy()));
-
+        ResourceLocation dimension = event.getPlayer().level().dimension().location();
+        Component fallbackDimensionName = Component.literal(CommonUtils.dimensionToString(dimension));
+        MutableComponent dimensionComponent = createDimensionLabel(event.getPlayer(), fallbackDimensionName);
+        event.setMessage(Component.empty()
+                .append(dimensionComponent)
+                .append(Component.literal(" "))
+                .append(Component.literal(event.getRawText())));
     }
 
     @SubscribeEvent
     public static void changeTabListName(PlayerEvent.TabListNameFormat event) {
-        if (Config.DIM_IN_CHAT_NAME.get()) {
+        if (!Config.DIM_IN_CHAT_NAME.get()) {
             event.setDisplayName(event.getEntity().getDisplayName());
-        } else {
-            MutableComponent originalName = event.getEntity().getDisplayName().copy();
-            event.setDisplayName(createDimensionComponent(event, originalName));
+            return;
         }
+
+        MutableComponent originalName = event.getEntity().getDisplayName().copy();
+        event.setDisplayName(createDimensionComponent((ServerPlayer) event.getEntity(), originalName));
     }
 }

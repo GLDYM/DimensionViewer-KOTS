@@ -1,12 +1,11 @@
 package dev.stick_stack.dimensionviewer;
 
-import dev.stick_stack.dimensionviewer.CommonUtils;
-import dev.stick_stack.dimensionviewer.Config;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class ConfigHelper{
 
@@ -51,11 +50,13 @@ public class ConfigHelper{
         return Config.LIST_FORMAT.get();
     }
 
+    @SuppressWarnings("unchecked")
     public static List<String> GetAllCustomColors() {
         return (List<String>) Config.CUSTOM_COLORS.get();
     }
 
     public static void AddCustomColor(String name, String color) {
+        @SuppressWarnings("unchecked")
         List<String> colors = (List<String>) Config.CUSTOM_COLORS.get();
 
         colors.add("%s %s".formatted(name, color));
@@ -63,6 +64,7 @@ public class ConfigHelper{
     }
 
     public static boolean RemoveCustomColor(String name) {
+        @SuppressWarnings("unchecked")
         List<String> colors = (List<String>) Config.CUSTOM_COLORS.get();
 
         int i = 0;
@@ -78,15 +80,9 @@ public class ConfigHelper{
     }
 
     public static @Nullable String GetAlias(String dimId) {
-        for (var dim : Config.DIM_ALIASES.get()) {
-            var values = dim.split(" ", 2);
-
-            if (dimId.equals(values[0])) {
-                return values[1];
-            }
-        }
-
-        return null;
+        @SuppressWarnings("unchecked")
+        String entry = findMatchingEntry((List<String>) Config.DIM_ALIASES.get(), dimId);
+        return entry == null ? null : entry.split(" ", 2)[1];
     }
 
     public static @Nullable String GetCustomColor(String dimId) {
@@ -95,40 +91,24 @@ public class ConfigHelper{
             case "minecraft:the_nether" -> NetherColor();
             case "minecraft:the_end" -> EndColor();
             default -> {
-                for (var dim : Config.MODDED_DIMS.get()) {
-                    var values = dim.split(" ", 2);
-
-                    if (dimId.equals(values[0])) {
-                        yield values[1];
-                    }
-                }
-
-                yield null;
+                @SuppressWarnings("unchecked")
+                String entry = findMatchingEntry((List<String>) Config.MODDED_DIMS.get(), dimId);
+                yield entry == null ? null : entry.split(" ", 2)[1];
             }
         };
     }
 
     public static void SetAlias(String dimId, String alias) {
+        @SuppressWarnings("unchecked")
         List<String> aliases = (List<String>) Config.DIM_ALIASES.get();
+        String updatedValue = "%s %s".formatted(dimId, alias);
 
-        int i = 0;
-        for (String dim : aliases) {
-            var values = dim.split(" ", 2);
-
-            if (dimId.equals(values[0])) {
-                aliases.set(i, "%s %s".formatted(dimId, alias));
-                Config.DIM_ALIASES.set(aliases);
-                return;
-            }
-
-            i++;
-        }
-
-        aliases.add(i, "%s %s".formatted(dimId, alias));
+        upsertPatternEntry(aliases, dimId, updatedValue);
         Config.DIM_ALIASES.set(aliases);
     }
 
     public static void SetColor(String dimId, String color) {
+        @SuppressWarnings("unchecked")
         List<String> dims = (List<String>) Config.MODDED_DIMS.get();
 
         switch (dimId) {
@@ -142,20 +122,7 @@ public class ConfigHelper{
                 Config.END_COLOR.set(color);
             }
             default -> {
-                int i = 0;
-                for (String dim : Config.MODDED_DIMS.get()) {
-                    var values = dim.split(" ", 2);
-
-                    if (dimId.equals(values[0])) {
-                        dims.set(i, "%s %s".formatted(dimId, color));
-                        Config.MODDED_DIMS.set(dims);
-                        return;
-                    }
-
-                    i++;
-                }
-
-                dims.add("%s %s".formatted(dimId, color));
+                upsertPatternEntry(dims, dimId, "%s %s".formatted(dimId, color));
                 Config.MODDED_DIMS.set(dims);
             }
         }
@@ -171,9 +138,10 @@ public class ConfigHelper{
     }
 
     public static void ResetAlias(String dimId) {
+        @SuppressWarnings("unchecked")
         List<String> aliases = (List<String>) Config.DIM_ALIASES.get();
 
-        aliases.removeIf(a -> dimId.equals(a.split(" ", 2)[0]));
+        removePatternEntry(aliases, dimId);
         Config.DIM_ALIASES.set(aliases);
     }
 
@@ -183,8 +151,9 @@ public class ConfigHelper{
             case "minecraft:the_nether" -> Config.NETHER_COLOR.set(Config.DEFAULT_NETHER_COLOR);
             case "minecraft:the_end" -> Config.END_COLOR.set(Config.DEFAULT_END_COLOR);
             default -> {
+                @SuppressWarnings("unchecked")
                 List<String> dims = (List<String>) Config.MODDED_DIMS.get();
-                dims.removeIf(a -> dimId.equals(a.split(" ", 2)[0]));
+                removePatternEntry(dims, dimId);
 
                 Config.MODDED_DIMS.set(dims);
             }
@@ -204,13 +173,47 @@ public class ConfigHelper{
         players.getPlayers().forEach(ServerPlayer::refreshTabListName);
     }
 
+    @SuppressWarnings("unchecked")
     public static boolean HasAlias(String dimId) {
-        for (var dim : Config.DIM_ALIASES.get()) {
-            if (dim.split(" ", 2)[0].equals(dimId)) {
-                return true;
+        return findMatchingEntry((List<String>) Config.DIM_ALIASES.get(), dimId) != null;
+    }
+
+    private static @Nullable String findMatchingEntry(List<String> entries, String dimId) {
+        for (String entry : entries) {
+            String[] values = entry.split(" ", 2);
+            Pattern pattern = Pattern.compile(values[0]);
+
+            if (pattern.matcher(dimId).find()) {
+                return entry;
             }
         }
 
-        return false;
+        return null;
+    }
+
+    private static void upsertPatternEntry(List<String> entries, String pattern, String updatedValue) {
+        int index = findExactPatternIndex(entries, pattern);
+        if (index >= 0) {
+            entries.set(index, updatedValue);
+        } else {
+            entries.add(updatedValue);
+        }
+    }
+
+    private static void removePatternEntry(List<String> entries, String pattern) {
+        int index = findExactPatternIndex(entries, pattern);
+        if (index >= 0) {
+            entries.remove(index);
+        }
+    }
+
+    private static int findExactPatternIndex(List<String> entries, String pattern) {
+        for (int i = 0; i < entries.size(); i++) {
+            if (entries.get(i).split(" ", 2)[0].equals(pattern)) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 }

@@ -18,10 +18,14 @@ public class PlayerListHandler {
     public MutableComponent makeDimensionComponent(Player player, String format) {
         ResourceLocation dimension = player.level().dimension().location();
 
-        return extractTokensFromFormat(format, dimension);
+        return extractTokensFromFormat(format, dimension, player.level().getDescription());
     }
 
-    private MutableComponent extractTokensFromFormat(String format, ResourceLocation dimension) {
+    public MutableComponent makeDimensionComponent(String format, ResourceLocation dimension, Component translatedDimension) {
+        return extractTokensFromFormat(format, dimension, translatedDimension);
+    }
+
+    private MutableComponent extractTokensFromFormat(String format, ResourceLocation dimension, Component translatedDimension) {
         // Check the list format for tokens, then remove any tokens from the string
         Style style = checkTokens(null, format);
         format = replaceTokens(format);
@@ -30,22 +34,23 @@ public class PlayerListHandler {
         String aliasedDim = checkForAliases(dimension.toString());
         style = checkTokens(style, aliasedDim);
         aliasedDim = replaceTokens(aliasedDim);
+        boolean aliasUsesDimensionToken = aliasedDim.contains("%d");
 
         // The alias can use the `%d` token, allowing the original name to be used
         aliasedDim = aliasedDim.replace("%d", CommonUtils.toTitleCase(
                 CommonUtils.splitResourceLocation(dimension, 1)
         ));
 
-        // Try to translate the dimension name
-        Component aliasedDimComp = Component.translatable(aliasedDim);
+        Component dimensionComponent = aliasUsesDimensionToken
+                ? translatedDimension.copy()
+                : Component.translatableWithFallback(aliasedDim, aliasedDim);
 
-        // Finally, replace the dimension placeholder with the actual dimension name.
-        MutableComponent result = Component.literal("");
+        MutableComponent result = Component.empty();
         List<String> parts = List.of(format.split("%d", -1));
         for (int i = 0; i < parts.size(); i++) {
             result.append(Component.literal(parts.get(i)));
             if (i < parts.size() - 1) {
-                result.append(aliasedDimComp.copy());
+                result.append(dimensionComponent.copy());
             }
         }
 

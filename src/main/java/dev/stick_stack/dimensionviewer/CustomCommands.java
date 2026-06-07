@@ -9,7 +9,6 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.ColorArgument;
-import net.minecraft.commands.arguments.DimensionArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -24,9 +23,9 @@ public class CustomCommands {
                 .then(Commands.literal("get")
                         .executes(CustomCommands::getDimensionId)
                         .then(Commands.literal("color")
-                                .then(Commands.argument("dimension", DimensionArgument.dimension())
+                                .then(Commands.argument("dimension", StringArgumentType.greedyString())
                                         .executes(ctx -> {
-                                            String dim = DimensionArgument.getDimension(ctx, "dimension").dimension().location().toString();
+                                            String dim = getDimensionPattern(ctx);
                                             String value = ConfigHelper.GetCustomColor(dim);
 
                                             if (value != null) {
@@ -40,9 +39,9 @@ public class CustomCommands {
                                 )
                         )
                         .then(Commands.literal("alias")
-                                .then(Commands.argument("dimension", DimensionArgument.dimension())
+                                .then(Commands.argument("dimension", StringArgumentType.greedyString())
                                         .executes(ctx -> {
-                                            String dim = DimensionArgument.getDimension(ctx, "dimension").dimension().location().toString();
+                                            String dim = getDimensionPattern(ctx);
 
                                             String value = ConfigHelper.GetAlias(dim);
                                             if (ConfigHelper.HasAlias(dim)) {
@@ -64,10 +63,10 @@ public class CustomCommands {
                 .then(Commands.literal("set")
                         .requires(src -> src.hasPermission(Commands.LEVEL_ADMINS))
                         .then(Commands.literal("color")
-                                .then(Commands.argument("dimension", DimensionArgument.dimension())
+                                .then(Commands.argument("dimension", StringArgumentType.word())
                                         .then(Commands.argument("custom_color", ColorArgument.color())
                                                 .executes(ctx -> {
-                                                    var dim = DimensionArgument.getDimension(ctx, "dimension").dimension().location().toString();
+                                                    var dim = getDimensionPattern(ctx);
                                                     var color = ColorArgument.getColor(ctx, "custom_color").getSerializedName().toUpperCase(Locale.ROOT);
 
                                                     ConfigHelper.SetColor(dim, color);
@@ -80,10 +79,10 @@ public class CustomCommands {
                                 )
                         )
                         .then(Commands.literal("alias")
-                                .then(Commands.argument("dimension", DimensionArgument.dimension())
+                                .then(Commands.argument("dimension", StringArgumentType.word())
                                         .then(Commands.argument("alias", StringArgumentType.greedyString())
                                                 .executes(ctx -> {
-                                                    var dim = DimensionArgument.getDimension(ctx, "dimension").dimension().location().toString();
+                                                    var dim = getDimensionPattern(ctx);
                                                     var alias = StringArgumentType.getString(ctx, "alias");
 
                                                     ConfigHelper.SetAlias(dim, alias);
@@ -165,9 +164,9 @@ public class CustomCommands {
                                 })
                         )
                         .then(Commands.literal("color")
-                                .then(Commands.argument("dimension", DimensionArgument.dimension())
+                                .then(Commands.argument("dimension", StringArgumentType.greedyString())
                                         .executes(ctx -> {
-                                            var dim = DimensionArgument.getDimension(ctx, "dimension").dimension().location().toString();
+                                            var dim = getDimensionPattern(ctx);
 
                                             ConfigHelper.ResetColor(dim);
                                             refreshDisplayNames(ctx);
@@ -177,9 +176,9 @@ public class CustomCommands {
                                 )
                         )
                         .then(Commands.literal("alias")
-                                .then(Commands.argument("dimension", DimensionArgument.dimension())
+                                .then(Commands.argument("dimension", StringArgumentType.greedyString())
                                         .executes(ctx -> {
-                                            var dim = DimensionArgument.getDimension(ctx, "dimension").dimension().location().toString();
+                                            var dim = getDimensionPattern(ctx);
                                             ConfigHelper.ResetAlias(dim);
                                             refreshDisplayNames(ctx);
                                             ctx.getSource().sendSuccess(() -> Component.literal("Reset alias for dimension: %s".formatted(dim)), true);
@@ -260,10 +259,10 @@ public class CustomCommands {
                         )
                         .then(Commands.literal("set")
                                 .requires(src -> src.hasPermission(Commands.LEVEL_ADMINS))
-                                .then(Commands.argument("dimension", DimensionArgument.dimension())
+                                .then(Commands.argument("dimension", StringArgumentType.word())
                                         .then(Commands.argument("custom_color", StringArgumentType.word())
                                                 .executes(ctx -> {
-                                                    var dim = DimensionArgument.getDimension(ctx, "dimension").dimension().location().toString();
+                                                    var dim = getDimensionPattern(ctx);
                                                     var color = StringArgumentType.getString(ctx, "custom_color").toUpperCase();
 
                                                     if (ConfigHelper.GetAllCustomColors().stream().anyMatch(c -> c.split(" ", 2)[0].equals(color))) {
@@ -320,5 +319,9 @@ public class CustomCommands {
 
     private static void refreshDisplayNames(CommandContext<CommandSourceStack> context) {
         refreshDisplayNames(context, false);
+    }
+
+    private static String getDimensionPattern(CommandContext<CommandSourceStack> context) {
+        return StringArgumentType.getString(context, "dimension");
     }
 }

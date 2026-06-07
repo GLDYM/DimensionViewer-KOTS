@@ -1,0 +1,27 @@
+modLoader="javafml"
+loaderVersion="${neoforge_loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="${mod_authors}"
+description='${mod_description}'
+displayURL="https://github.com/Ewan-Selkirk/Dimension-Viewer"
+logoFile="Dimension-Viewer-Icon.png"
+displayTest="IGNORE_SERVER_VERSION"
+
+[[dependencies.dimensionviewer]]
+    modId="neoforge"
+    type="required"
+    versionRange="[${neoforge_version},)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.dimensionviewer]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
